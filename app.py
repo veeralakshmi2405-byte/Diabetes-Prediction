@@ -1,15 +1,17 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import shap
 import joblib
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 # ------------------------------
 # Load Model
 # ------------------------------
 model = joblib.load("best_model.joblib")
 
+# ------------------------------
+# Page Config
+# ------------------------------
 st.set_page_config(
     page_title="🩺 Diabetes Prediction App",
     page_icon="🩺",
@@ -17,10 +19,15 @@ st.set_page_config(
 )
 
 # ------------------------------
-# App Title
+# Title Section
 # ------------------------------
-st.title("🩺 Diabetes Prediction System")
-st.markdown("### Predict the likelihood of diabetes based on health parameters")
+st.title("🩺 Diabetes Prediction Dashboard")
+st.markdown(
+    """
+    Welcome to the **Diabetes Prediction System**.  
+    Enter patient health details on the left panel to check the likelihood of diabetes.  
+    """
+)
 st.write("---")
 
 # ------------------------------
@@ -53,59 +60,65 @@ def user_input():
 input_df = user_input()
 
 # ------------------------------
-# Prediction
+# Main Layout
 # ------------------------------
-if st.sidebar.button("🔍 Predict Diabetes"):
-    prediction = model.predict(input_df)[0]
+col1, col2 = st.columns([1, 2])
 
-    # Probability handling
-    try:
-        proba = model.predict_proba(input_df)[0][1]
-    except:
-        proba = 0.5  # if model has no predict_proba
+with col1:
+    st.subheader("🧾 Patient Summary")
+    st.dataframe(input_df.style.set_properties(**{'background-color': '#f0f2f6'}))
 
-    # Display result card
+with col2:
     st.subheader("📊 Prediction Result")
-    if prediction == 1:
-        st.error(f"⚠️ The patient is **likely Diabetic** with probability {proba:.2f}")
+    if st.sidebar.button("🔍 Predict Diabetes"):
+        prediction = model.predict(input_df)[0]
+
+        # Probability handling
+        try:
+            proba = model.predict_proba(input_df)[0][1]
+        except:
+            proba = 0.5  # fallback if model has no predict_proba
+
+        if prediction == 1:
+            st.error(f"⚠️ The patient is **likely Diabetic** with probability {proba:.2f}")
+        else:
+            st.success(f"✅ The patient is **likely Non-Diabetic** with probability {1-proba:.2f}")
     else:
-        st.success(f"✅ The patient is **likely Non-Diabetic** with probability {1-proba:.2f}")
+        st.info("👈 Enter details in the sidebar and click **Predict Diabetes**.")
 
-    # ------------------------------
-    # SHAP Explanation
-    # ------------------------------
-    st.subheader("🔎 Model Explainability (SHAP Values)")
+st.write("---")
 
-    # Choose explainer depending on model type
-    model_type = str(type(model))
+# ------------------------------
+# Model Performance Section
+# ------------------------------
+st.subheader("📈 Model Performance Comparison")
 
-    if "XGB" in model_type or "Forest" in model_type:
-        explainer = shap.TreeExplainer(model)
-        shap_values = explainer(input_df)
-    elif "LogisticRegression" in model_type or "SVC" in model_type:
-        explainer = shap.LinearExplainer(model, input_df, feature_dependence="independent")
-        shap_values = explainer.shap_values(input_df)
-    else:
-        explainer = shap.Explainer(model, input_df)
-        shap_values = explainer(input_df)
+try:
+    results_df = pd.read_csv("model_results.csv")
 
-    # Waterfall plot (per-sample explanation)
-    st.write("Feature contributions for this prediction:")
-    fig, ax = plt.subplots(figsize=(10, 5))
-    try:
-        shap.plots.waterfall(shap_values[0], show=False)
+    col3, col4 = st.columns(2)
+
+    with col3:
+        st.write("### Accuracy by Model")
+        fig, ax = plt.subplots(figsize=(6, 4))
+        sns.barplot(x="Model", y="Accuracy", data=results_df, ax=ax, palette="Blues_d")
+        plt.xticks(rotation=30)
         st.pyplot(fig)
-    except Exception as e:
-        st.warning("Waterfall plot not supported for this model type.")
 
-    # Bar plot (global importance for this input)
-    st.write("Overall feature importance for this prediction:")
-    fig, ax = plt.subplots(figsize=(8, 5))
-    try:
-        shap.plots.bar(shap_values, show=False)
+    with col4:
+        st.write("### Precision by Model")
+        fig, ax = plt.subplots(figsize=(6, 4))
+        sns.barplot(x="Model", y="Precision", data=results_df, ax=ax, palette="Greens_d")
+        plt.xticks(rotation=30)
         st.pyplot(fig)
-    except Exception:
-        st.warning("Bar plot not supported for this model type.")
 
-else:
-    st.info("👈 Enter patient details in the sidebar and click **Predict Diabetes** to see results.")
+    # Recall as full-width chart
+    st.write("### Recall by Model")
+    fig, ax = plt.subplots(figsize=(8, 4))
+    sns.barplot(x="Model", y="Recall", data=results_df, ax=ax, palette="Oranges_d")
+    plt.xticks(rotation=30)
+    st.pyplot(fig)
+
+except FileNotFoundError:
+    st.warning("⚠️ `model_results.csv` not found. Upload it to see model performance charts.")
+
