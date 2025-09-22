@@ -57,7 +57,12 @@ input_df = user_input()
 # ------------------------------
 if st.sidebar.button("🔍 Predict Diabetes"):
     prediction = model.predict(input_df)[0]
-    proba = model.predict_proba(input_df)[0][1]  # probability of diabetes
+
+    # Probability handling
+    try:
+        proba = model.predict_proba(input_df)[0][1]
+    except:
+        proba = 0.5  # if model has no predict_proba
 
     # Display result card
     st.subheader("📊 Prediction Result")
@@ -71,20 +76,36 @@ if st.sidebar.button("🔍 Predict Diabetes"):
     # ------------------------------
     st.subheader("🔎 Model Explainability (SHAP Values)")
 
-    explainer = shap.TreeExplainer(model) if "XGB" in str(type(model)) or "Forest" in str(type(model)) else shap.Explainer(model, input_df)
-    shap_values = explainer(input_df)
+    # Choose explainer depending on model type
+    model_type = str(type(model))
 
-    # Force Plot (per-sample)
+    if "XGB" in model_type or "Forest" in model_type:
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer(input_df)
+    elif "LogisticRegression" in model_type or "SVC" in model_type:
+        explainer = shap.LinearExplainer(model, input_df, feature_dependence="independent")
+        shap_values = explainer.shap_values(input_df)
+    else:
+        explainer = shap.Explainer(model, input_df)
+        shap_values = explainer(input_df)
+
+    # Waterfall plot (per-sample explanation)
     st.write("Feature contributions for this prediction:")
-
     fig, ax = plt.subplots(figsize=(10, 5))
-    shap.plots.waterfall(shap_values[0], show=False)
-    st.pyplot(fig)
+    try:
+        shap.plots.waterfall(shap_values[0], show=False)
+        st.pyplot(fig)
+    except Exception as e:
+        st.warning("Waterfall plot not supported for this model type.")
 
-    # Bar plot
+    # Bar plot (global importance for this input)
     st.write("Overall feature importance for this prediction:")
-    shap.plots.bar(shap_values, show=False)
-    st.pyplot(bbox_inches='tight', dpi=120)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    try:
+        shap.plots.bar(shap_values, show=False)
+        st.pyplot(fig)
+    except Exception:
+        st.warning("Bar plot not supported for this model type.")
 
 else:
     st.info("👈 Enter patient details in the sidebar and click **Predict Diabetes** to see results.")
