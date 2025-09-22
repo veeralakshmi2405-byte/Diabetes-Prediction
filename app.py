@@ -95,30 +95,33 @@ st.subheader("📈 Model Performance Comparison")
 
 try:
     results_df = pd.read_csv("model_results.csv")
+    # Convert column names to lowercase to avoid mismatch
+    results_df.columns = [col.lower() for col in results_df.columns]
 
     col3, col4 = st.columns(2)
 
     with col3:
         st.write("### Accuracy by Model")
         fig, ax = plt.subplots(figsize=(6, 4))
-        sns.barplot(x="Model", y="Accuracy", data=results_df, ax=ax, palette="Blues_d")
+        sns.barplot(x="model", y="accuracy", data=results_df, ax=ax, palette="Blues_d")
         plt.xticks(rotation=30)
         st.pyplot(fig)
 
     with col4:
-        st.write("### Precision by Model")
+        st.write("### F1 Score by Model")
         fig, ax = plt.subplots(figsize=(6, 4))
-        sns.barplot(x="Model", y="Precision", data=results_df, ax=ax, palette="Greens_d")
+        sns.barplot(x="model", y="f1", data=results_df, ax=ax, palette="Greens_d")
         plt.xticks(rotation=30)
         st.pyplot(fig)
 
-    # Recall as full-width chart
-    st.write("### Recall by Model")
+    # ROC AUC full-width chart
+    st.write("### ROC AUC by Model")
     fig, ax = plt.subplots(figsize=(8, 4))
-    sns.barplot(x="Model", y="Recall", data=results_df, ax=ax, palette="Oranges_d")
+    sns.barplot(x="model", y="roc_auc", data=results_df, ax=ax, palette="Oranges_d")
     plt.xticks(rotation=30)
     st.pyplot(fig)
 
 except FileNotFoundError:
     st.warning("⚠️ `model_results.csv` not found. Upload it to see model performance charts.")
-
+except Exception as e:
+    st.error(f"Error in plotting model results: {e}")
