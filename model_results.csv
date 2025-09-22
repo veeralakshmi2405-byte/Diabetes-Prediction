@@ -1,0 +1,5 @@
+model,params,accuracy,f1,roc_auc
+LogisticRegression,{'classifier__C': np.float64(9.51714306409916)},0.7142857142857143,0.6206896551724138,0.8090740740740742
+RandomForest,"{'classifier__max_depth': None, 'classifier__min_samples_split': 2, 'classifier__n_estimators': 253}",0.7467532467532467,0.6548672566371682,0.8175
+SVC,"{'classifier__C': np.float64(9.799098521619943), 'classifier__kernel': 'rbf'}",0.7207792207792207,0.6126126126126126,0.7887037037037037
+XGBoost,"{'classifier__learning_rate': np.float64(0.15639878836228102), 'classifier__max_depth': 7, 'classifier__n_estimators': 70}",0.7467532467532467,0.6486486486486487,0.8253703703703704
